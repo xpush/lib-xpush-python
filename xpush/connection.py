@@ -2,8 +2,11 @@ from socketIO_client import SocketIO, BaseNamespace
 
 class XpushNamespace(BaseNamespace):
 
-	def on_aaa_response(self, *args):
-		print('on_aaa_response', args)
+	def on_response(self, *args):
+		print("on_response", args)
+
+	def on_connect(self):
+		print(self)
 
 class Connection(object):
 	def __init__(self, xpush, type, server):
@@ -11,10 +14,10 @@ class Connection(object):
 		self._xpush = xpush
 		self._type = type
 		self._server = server
+		self._connected = False
+		self._socket = None
 
-	def connect( self, cb ):
-
-		print( 'appId : ', self._xpush.appId )
+	def connect(self, cb):
 
 		appId = self._xpush.appId
 		userId = self._xpush.userId
@@ -34,7 +37,20 @@ class Connection(object):
 		port = int( strArr[2] )
 
 		socketIO = SocketIO( host, port, params= q )
-		#xpush_namespace = socketIO.define(XpushNamespace, '/'+self._type)
-		#socketIO.on('connect', xpush_namespace.on_aaa_response )
-		#socketIO.emit('aaa', {'xxx': 'yyy'})
-		#cb()
+
+		#xpush_namespace = socketIO.define(XpushNamespace, "/"+self._type)
+
+		#socketIO.on_connect("connect", xpush_namespace.on_response )
+		#socketIO.emit("aaa", {"xxx": "yyy"})
+
+		#print( xpush_namespace )
+
+		self._connected = True
+		self._socket = socketIO
+		cb()
+
+	def send(self, name, data, cb):
+
+		if(self._connected):
+			self._socket.emit("send", {"NM": name , "DT": data})
+			cb()

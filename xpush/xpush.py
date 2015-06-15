@@ -2,9 +2,7 @@ import collections
 from socketIO_client import SocketIO, LoggingNamespace
 from requests import Session
 
-session = Session()
-
-SESSION, CHANNEL = "session", "channel"
+request = Session()
 
 class XPush(object):
 
@@ -12,6 +10,8 @@ class XPush(object):
 	appId = ""
 	userEventNames = {}
 	channels = {}
+
+	SESSION, CHANNEL = "session", "channel"
 
 	def __init__(self, host, appId, eventHandler=None, autoInitFlag=True):
 		if host is None:
@@ -57,12 +57,12 @@ class XPush(object):
 	def rest(self, context, method, data, headers ):
 		if method == 'GET' :
 			url = self.hostname+context
-			response = session.get( url )
+			response = request.get( url )
 			return response.text
 
 		else :
 			url = self.hostname+context
-			response = session.post(
+			response = request.post(
 				url=url,
 				data=data,
 				headers=headers
