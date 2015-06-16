@@ -6,7 +6,21 @@ class XpushNamespace(BaseNamespace):
 		print("on_response", args)
 
 	def on_connect(self):
-		print(self)
+		print("on connect")
+
+	def on_disconnect(self):
+		"""Called after socket.io disconnects.
+		You can override this method."""
+
+	def on_event(self, event, *args):
+		"""Called after socket.io sends an error packet.
+		You can override this method."""
+		#print("on event ", event)
+
+	def on_error(self, data):
+		print("on error ", data)
+		"""Called after socket.io sends an error packet.
+		You can override this method."""
 
 class Connection(object):
 	def __init__(self, xpush, type, server):
@@ -16,6 +30,11 @@ class Connection(object):
 		self._server = server
 		self._connected = False
 		self._socket = None
+		self.channel = None
+		self.xpushNamespace = None
+
+		self.info = None
+		self.chNm = None
 
 	def connect(self, cb):
 
@@ -28,29 +47,38 @@ class Connection(object):
 			"A" : appId,
 			"U" : userId, 
 			"D" : deviceId,
-			"TK" : token
+			"C" : 'zztv',
+			"S" : '10' 
 		}
 
-		strArr = self._server.split(":")
+		strArr = self._server.get( "url" ).split(":")
 		protocol = strArr[0]
 		host =  strArr[1].replace( "//", "" )
 		port = int( strArr[2] )
 
 		socketIO = SocketIO( host, port, params= q )
 
-		#xpush_namespace = socketIO.define(XpushNamespace, "/"+self._type)
+		self.xpushNamespace = socketIO.define(XpushNamespace, "/"+self._type)
 
-		#socketIO.on_connect("connect", xpush_namespace.on_response )
 		#socketIO.emit("aaa", {"xxx": "yyy"})
-
-		#print( xpush_namespace )
 
 		self._connected = True
 		self._socket = socketIO
+		#self._socket.wait()
+
 		cb()
 
 	def send(self, name, data, cb):
 
 		if(self._connected):
 			self._socket.emit("send", {"NM": name , "DT": data})
+			self._socket.on('message', self.xpushNamespace.on_response)
+			self._socket.wait_for_callbacks(seconds=2)
+			self._socket.wait()
+			print( "123123" )
 			cb()
+	
+	def setServerInfo(self, info, cb):
+		url = info.get( "server" ).get( "url" )
+		self._server = { "serverUrl" : url}
+		self.chNm = info.get( "channel" )
