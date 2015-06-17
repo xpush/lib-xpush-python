@@ -6,7 +6,7 @@ from connection import Connection
 
 request = Session()
 
-SESSION, CHANNEL = "session", "channel"
+TYPE_SESSION, TYPE_CHANNEL = "session", "channel"
 
 class XPush(object):
 
@@ -41,13 +41,11 @@ class XPush(object):
 
 	def createSimpleChannel(self, channel, userObj, callback):
 		data = self._getChannelInfo(channel)
-		ch = self._makeChannel(channel, data)
+		ch = self._makeChannel(channel, data, True)
 		ch.connect( callback )
-		return ""
 
-	def _makeChannel(self, channel, server):
-		print( server )
-		ch = Connection(self, CHANNEL, server)
+	def _makeChannel(self, channel, server, channelOnly=False):
+		ch = Connection(self, TYPE_CHANNEL, server, channel, channelOnly)
 		if channel :
 			ch.channel = channel
 			self._channels[channel] = ch
@@ -73,12 +71,22 @@ class XPush(object):
 			)
 			return response.text
 
-	def getChannelAsync(self, channel ):
+	def getChannelAsync(self, channel):
 		ch = self.getChannel(channel);
+		if ch == None :
+			self._channels[channel] = ch
+
+			serverInfo = self._getChannelInfo(channel)
+
+			print( serverInfo )
+			ch = self._makeChannel(channel, serverInfo)
+
+			if( serverInfo ) :
+				ch.setServerInfo(serverInfo)
+
 		return ch
 
 	def getChannel(self, channel ):
-		print( self._channels )
 		return self._channels.get( channel )
 
 	def on_response(*args):
@@ -87,3 +95,7 @@ class XPush(object):
 	def send(self, channel, name, data ):
 		ch = self.getChannelAsync(channel)
 		ch.send(name,data,self.on_response)
+
+	def joinChannel(self,channel,param,cb):
+		ch = self.getChannelAsync(channel)
+		ch.joinChannel( param, cb )

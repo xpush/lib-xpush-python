@@ -8,5 +8,5 @@ xpush = XPush( 'http://localhost:8000', 'P-00001' )
 channel = 'zztv'
 
 xpush.createSimpleChannel( channel, {}, on_response )
-
+xpush.joinChannel( channel, {'U':['notdol']}, on_response )
 xpush.send( channel, "message", { "AA":"BB", "CC":"DD" } )
