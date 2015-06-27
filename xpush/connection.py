@@ -1,12 +1,34 @@
 from socketIO_client import SocketIO, BaseNamespace
 
-class XpushNamespace(BaseNamespace):
+class SessionNamespace(BaseNamespace):
 
 	def on_response(self, *args):
 		print("on_response", args)
 
 	def on_connect(self):
-		print("on connect")
+		print("on session connect")
+
+	def on_disconnect(self):
+		"""Called after socket.io disconnects.
+		You can override this method."""
+
+	def on_event(self, event, *args):
+		"""Called after socket.io sends an error packet.
+		You can override this method."""
+		#print("on event ", event)
+
+	def on_error(self, data):
+		print("on error ", data)
+		"""Called after socket.io sends an error packet.
+		You can override this method."""
+
+class ChannelNamespace(BaseNamespace):
+
+	def on_response(self, *args):
+		print("on_response", args)
+
+	def on_connect(self):
+		print("on channel connect")
 
 	def on_disconnect(self):
 		"""Called after socket.io disconnects.
@@ -39,7 +61,8 @@ class Connection(object):
 		self._connected = False
 		self._socket = None
 		self.channel = None
-		self.xpushNamespace = None
+		self.sessionNamespace = None
+		self.channelNamespace = None
 
 		self.info = None
 
@@ -61,6 +84,9 @@ class Connection(object):
 			"S" : serverName
 		}
 
+		if self._type == TYPE_SESSION :
+			q["TK"] = token  
+
 		if self._channelOnly == True :
 			q["MD"] = "CHANNEL_ONLY";
 
@@ -71,8 +97,10 @@ class Connection(object):
 
 		socketIO = SocketIO( host, port, params= q )
 
-		self.xpushNamespace = socketIO.define(XpushNamespace, "/"+self._type)
-
+		if self._type == TYPE_SESSION :
+			self.sessionNamespace = socketIO.define(SessionNamespace, "/"+self._type)
+		else :
+			self.channelNamespace = socketIO.define(ChannelNamespace, "/"+self._type)
 		#socketIO.emit("aaa", {"xxx": "yyy"})
 
 		self._connected = True
@@ -93,7 +121,12 @@ class Connection(object):
 
 		if(self._connected):
 			self._socket.emit("send", {"NM": name , "DT": data})
-			self._socket.on('message', self.xpushNamespace.on_response)
+
+			if self._type == TYPE_SESSION :
+				self._socket.on('message', self.sessionNamespace.on_response)
+			else :
+				self._socket.on('message', self.channelNamespace.on_response)
+
 			self._socket.wait_for_callbacks(seconds=2)
 			#self._socket.wait()
 			cb()

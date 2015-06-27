@@ -15,6 +15,7 @@ class XPush(object):
 	userEventNames = {}
 	_channels = {}
 	Context = None
+	_sessionConnection = None
 
 	def __init__(self, host, appId, eventHandler=None, autoInitFlag=True):
 		if host is None:
@@ -73,12 +74,10 @@ class XPush(object):
 
 	def getChannelAsync(self, channel):
 		ch = self.getChannel(channel);
-		if ch == None :
+		if ch is None :
 			self._channels[channel] = ch
 
 			serverInfo = self._getChannelInfo(channel)
-
-			print( serverInfo )
 			ch = self._makeChannel(channel, serverInfo)
 
 			if( serverInfo ) :
@@ -99,3 +98,40 @@ class XPush(object):
 	def joinChannel(self,channel,param,cb):
 		ch = self.getChannelAsync(channel)
 		ch.joinChannel( param, cb )
+
+	def login(self,userId, password, deviceId, cb):
+		self.userId = userId
+		if deviceId is None :
+			deviceId = 'WEB'
+
+		self.deviceId = deviceId
+
+		sendData = {"A": self.appId, "U": userId, "PW": password, "D": deviceId}
+		response = self.rest( self.Context.get('LOGIN'), 'POST', sendData, {} )
+		res = json.loads( response )
+
+		url = res.get( "result" ).get( "serverUrl" )
+		name = res.get( "result" ).get( "server" )
+		self.token = res.get( "result" ).get( "token" )
+
+		serverInfo = {
+			"url" : url,
+			"name" : name
+		}
+
+		if res.get( "status" ) == 'ok' :
+			self._sessionConnection = Connection(self, TYPE_SESSION, serverInfo, False);
+			self._sessionConnection.connect( self._sessionConnectCallback );
+
+			print( res )
+
+	def signup(self, userId, password, deviceId, cb):
+		sendData = {"A": self.appId, "U": userId, "PW": password, "D": deviceId}
+		response = self.rest( self.Context.get('SIGNUP') , 'POST', sendData, {} )
+		res = json.loads( response )
+
+	def _initSessionSocket(self, socket):
+		print( 'init session' )
+
+	def _sessionConnectCallback(self) :
+		self._initSessionSocket(self._sessionConnection._socket)
